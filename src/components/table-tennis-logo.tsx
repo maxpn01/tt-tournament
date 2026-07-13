@@ -1,5 +1,9 @@
 import type { SVGProps } from "react";
 
+/**
+ * Table-tennis mark: a clean paddle (uses currentColor, so it inherits text color)
+ * with a single warm ball caught mid-bounce off the blade edge.
+ */
 export function TableTennisLogo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -8,14 +12,13 @@ export function TableTennisLogo(props: SVGProps<SVGSVGElement>) {
       aria-hidden="true"
       {...props}
     >
-      <g transform="rotate(-32 24 24)">
-        <rect x="20" y="27" width="8" height="17" rx="4" fill="white" />
-        <rect x="21.5" y="28" width="5" height="15" rx="2.5" fill="var(--brand-blue)" />
-        <ellipse cx="24" cy="16" rx="13" ry="14.5" fill="white" />
-        <ellipse cx="24" cy="16" rx="11.25" ry="12.75" fill="var(--brand-green)" />
-        <path d="M15.5 8.5c4-4.5 11.5-6 17.5-1" stroke="white" strokeWidth="2" strokeLinecap="round" opacity=".35" />
+      <g transform="rotate(-28 24 24)" fill="currentColor">
+        <rect x="19.5" y="27" width="8" height="18" rx="4" opacity=".85" />
+        <circle cx="23.5" cy="17" r="13.5" />
       </g>
-      <circle cx="39" cy="9" r="4.5" fill="white" stroke="var(--brand-blue)" strokeWidth="2" />
+      {/* ball in play — halo separates it from the blade */}
+      <circle cx="37" cy="12.5" r="6.5" fill="var(--card, #fff)" />
+      <circle cx="37" cy="12.5" r="4.5" fill="var(--brand-ball)" />
     </svg>
   );
 }

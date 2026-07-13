@@ -38,7 +38,7 @@ export function SetupView({
               <TableTennisLogo className="size-11 shrink-0" />
               <span className="text-sm font-bold tracking-tight">Table Tennis Tournament</span>
             </div>
-            <p className="mt-10 text-xs font-black uppercase tracking-[.2em] opacity-70">Tournament control</p>
+            <p className="mt-10 text-xs font-semibold uppercase tracking-[.2em] opacity-70">Tournament control</p>
             <h1 className="mt-3 max-w-md text-4xl font-black leading-[.95] tracking-[-.045em] sm:text-6xl">
               Run the whole event from one screen.
             </h1>
@@ -51,7 +51,7 @@ export function SetupView({
 
           <div className="p-6 sm:p-10">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">New tournament</p>
+              <p className="text-xs font-semibold uppercase tracking-[.16em] text-primary">New tournament</p>
               <h2 className="mt-2 text-2xl font-bold tracking-tight">Add the field</h2>
               <p className="mt-1 text-sm text-muted-foreground">One player per line. Names can be corrected later without losing results.</p>
             </div>

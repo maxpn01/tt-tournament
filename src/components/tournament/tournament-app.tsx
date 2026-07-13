@@ -303,12 +303,12 @@ export function TournamentApp({
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b-2 border-primary/80 pb-4">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
         <div className="flex min-w-0 items-center gap-3">
-          <Link href="/" aria-label="Table Tennis Tournament home" className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-navy p-1.5 shadow-sm ring-2 ring-primary/20">
+          <Link href="/" aria-label="Table Tennis Tournament home" className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/10 p-1.5 text-primary ring-1 ring-primary/15 transition-colors hover:bg-primary/15">
             <TableTennisLogo className="size-full" />
           </Link>
-          <div className="min-w-0"><h1 className="truncate text-xl font-bold tracking-tight">{state.name}</h1><p className="text-xs font-bold uppercase tracking-[.1em] text-muted-foreground">Round robin · Top 8 playoffs</p></div>
+          <div className="min-w-0"><h1 className="truncate text-xl font-bold tracking-tight">{state.name}</h1><p className="mt-0.5 text-xs font-medium tracking-wide text-muted-foreground">Round robin · Top 8 playoffs</p></div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Badge variant={saveStatus === "offline" || saveStatus === "conflict" ? "destructive" : cloud ? "default" : "outline"}>{saveStatus === "offline" ? <WifiOff /> : cloud ? <Wifi /> : <CloudOff />}{cloudLabel}</Badge>
@@ -325,7 +325,7 @@ export function TournamentApp({
         <SummaryCard label="Players" value={String(state.players.length)} sub="Top 8 advance" />
         <SummaryCard label="Current stage" value={PHASE_LABELS[state.phase]} sub={state.phase === "round-robin" ? `Round ${currentRoundNumber(state)} of ${state.rounds.length}` : champion ? `${playerName(champion)} wins` : "Knockout stage"} />
         <SummaryCard label="Round robin" value={`${stats?.rrDone} / ${stats?.rrTotal}`} sub="Best of 3" />
-        <Card className="p-4"><p className="text-[10px] font-black uppercase tracking-[.13em] text-muted-foreground">Overall progress</p><p className="mt-1 text-2xl font-black tracking-tight">{stats?.progress}%</p><Progress className="mt-2" value={stats?.progress} /></Card>
+        <Card className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted-foreground">Overall progress</p><p className="mt-1 text-2xl font-bold tracking-tight">{stats?.progress}%</p><Progress className="mt-2" value={stats?.progress} /></Card>
       </section>
 
       <Tabs value={view} onValueChange={(value) => setView(value as typeof view)}>
@@ -352,5 +352,5 @@ export function TournamentApp({
 }
 
 function SummaryCard({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return <Card className="min-w-0 p-4"><p className="text-[10px] font-black uppercase tracking-[.13em] text-muted-foreground">{label}</p><p className="mt-1 truncate text-xl font-black tracking-tight sm:text-2xl">{value}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p></Card>;
+  return <Card className="min-w-0 p-4"><p className="text-[11px] font-semibold uppercase tracking-[.08em] text-muted-foreground">{label}</p><p className="mt-1 truncate text-xl font-bold tracking-tight sm:text-2xl">{value}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p></Card>;
 }

@@ -106,7 +106,7 @@ export function BracketView({
 
   if (!playoffs) {
     return (
-      <Card className="print-shadow-none">
+      <Card>
         <CardContent className="grid min-h-[460px] place-items-center p-8 text-center">
           <div><div className="mx-auto grid size-16 place-items-center rounded-2xl bg-primary/10 text-primary"><Network className="size-7" /></div><h2 className="mt-5 text-2xl font-bold">The bracket is waiting</h2><p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">Finish the round robin—or create a provisional top-eight bracket from the current standings.</p>{canEdit ? <Button className="mt-6" onClick={onCreatePlayoffs}>Create top 8 bracket</Button> : <Badge className="mt-6" variant="outline"><LockKeyhole /> Organizer access required</Badge>}</div>
         </CardContent>
@@ -116,16 +116,16 @@ export function BracketView({
 
   const champion = matchWinner(playoffs.final);
   return (
-    <Card className="overflow-hidden print-shadow-none">
+    <Card className="overflow-hidden">
       <CardHeader className="flex-row items-start justify-between border-b border-border">
         <div><CardTitle>Playoff bracket</CardTitle><CardDescription>Quarterfinals & semifinals BO5 · Final BO7</CardDescription></div>
-        {canEdit && <Button variant="outline" size="sm" onClick={onEditSeeds}>Edit seeds</Button>}
+        {canEdit && <Button variant="outline" size="sm" onClick={onEditSeeds}>Edit playoff order</Button>}
       </CardHeader>
       <CardContent className="p-0">
         <div className="scrollbar-thin overflow-x-auto px-5 pb-8 pt-10">
           <div ref={bracketRef} className="bracket-grid relative">
             <svg className="pointer-events-none absolute inset-0 z-0 size-full overflow-visible" aria-hidden="true">
-              {paths.map((path, index) => path && <path key={index} d={path} fill="none" stroke="color-mix(in oklch, var(--border) 85%, white)" strokeWidth="2" />)}
+              {paths.map((path, index) => path && <path key={index} d={path} fill="none" stroke="var(--border)" strokeWidth="2" />)}
             </svg>
             <span className="title-qf -translate-y-7 self-start text-[11px] font-black uppercase tracking-[.14em] text-muted-foreground">Quarterfinals · BO5</span>
             <span className="title-sf -translate-y-7 self-start text-[11px] font-black uppercase tracking-[.14em] text-muted-foreground">Semifinals · BO5</span>
@@ -136,7 +136,7 @@ export function BracketView({
           </div>
         </div>
         {champion && (
-          <div className="m-5 flex items-center justify-between rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/12 to-sky-300/5 p-5">
+          <div className="m-5 flex items-center justify-between rounded-lg border bg-muted/50 p-5">
             <div><p className="text-[10px] font-black uppercase tracking-[.16em] text-primary">Tournament champion</p><p className="mt-1 text-2xl font-black">{playerName(champion)}</p></div><Trophy className="size-10 text-primary" />
           </div>
         )}

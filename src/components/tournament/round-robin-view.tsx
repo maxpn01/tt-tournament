@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronRight, LockKeyhole } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -33,13 +32,13 @@ export function RoundRobinView({
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(350px,.8fr)]">
-      <Card className="overflow-hidden print-shadow-none">
+      <Card className="overflow-hidden">
         <CardHeader className="flex-row items-start justify-between border-b border-border">
           <div><CardTitle>Round {round.number}</CardTitle><CardDescription>{roundDone} of {round.matches.length} matches complete</CardDescription></div>
           <Button variant="outline" size="sm" onClick={() => onSelectRound(currentRoundNumber(state))}>Current round</Button>
         </CardHeader>
         <CardContent className="p-5">
-          <div className="scrollbar-thin mb-4 flex gap-2 overflow-x-auto pb-2" data-print-hide>
+          <div className="scrollbar-thin mb-4 flex gap-2 overflow-x-auto pb-2">
             {state.rounds.map((item) => (
               <button
                 type="button"
@@ -61,17 +60,25 @@ export function RoundRobinView({
               const complete = isMatchComplete(match);
               const winner = matchWinner(match);
               return (
-                <div key={match.id} className={cn("grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl border bg-background/45 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_70px_minmax(0,1fr)_auto]", complete && "border-primary/20")}>
+                <button
+                  type="button"
+                  key={match.id}
+                  disabled={!canEdit}
+                  onClick={() => onScore(match, 3)}
+                  aria-label={`${complete ? "Edit" : "Enter"} result for ${name(match.p1)} versus ${name(match.p2)}`}
+                  title={canEdit ? `${complete ? "Edit" : "Enter"} result` : "Read only"}
+                  className={cn(
+                    "grid w-full grid-cols-[minmax(0,1fr)_70px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border bg-background/45 px-3 py-3 text-left transition-colors disabled:cursor-default disabled:opacity-100",
+                    complete && "border-primary/20",
+                    canEdit && "hover:border-primary/50 hover:bg-primary/[.025] focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/20",
+                  )}
+                >
                   <span className={cn("truncate text-sm font-semibold", winner === match.p1 && "text-primary")}>{name(match.p1)}</span>
                   <span className="text-center text-lg font-black tabular-nums">{complete ? `${match.s1} : ${match.s2}` : "– : –"}</span>
                   <span className={cn("truncate text-right text-sm font-semibold", winner === match.p2 && "text-primary")}>{name(match.p2)}</span>
-                  {canEdit ? (
-                    <Button className="col-span-3 sm:col-span-1" variant="secondary" size="sm" onClick={() => onScore(match, 3)}>{complete ? "Edit" : "Result"}<ChevronRight /></Button>
-                  ) : (
-                    <Badge className="col-span-3 justify-center sm:col-span-1" variant="outline"><LockKeyhole /> Read only</Badge>
-                  )}
+                  {canEdit ? <ChevronRight className="size-4 text-muted-foreground" /> : <LockKeyhole className="size-4 text-muted-foreground" />}
                   <span className="sr-only">Match {index + 1}</span>
-                </div>
+                </button>
               );
             })}
             {round.bye && <div className="rounded-xl border border-dashed p-3 text-sm text-muted-foreground"><strong className="text-foreground">{name(round.bye)}</strong> has a bye this round.</div>}
@@ -79,7 +86,7 @@ export function RoundRobinView({
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden print-shadow-none">
+      <Card className="overflow-hidden">
         <CardHeader className="flex-row items-start justify-between border-b border-border">
           <div><CardTitle>Leaderboard</CardTitle><CardDescription>Top eight qualify</CardDescription></div>
           {canEdit && (
@@ -93,7 +100,10 @@ export function RoundRobinView({
               {rows.map((row, index) => (
                 <TableRow key={row.id} className={cn(index < 8 && "bg-primary/[.035]", index === 7 && "border-b border-primary/50")}>
                   <TableCell className="text-center font-bold text-muted-foreground">{index + 1}</TableCell>
-                  <TableCell className="min-w-36 font-semibold">{row.name}{index < 8 && <span className="ml-2 rounded bg-primary/10 px-1 py-0.5 text-[8px] font-black text-primary">Q</span>}</TableCell>
+                  <TableCell className="min-w-36 font-semibold">
+                    {row.name}
+                    {index < 8 && <span className="ml-2" role="img" aria-label="Top eight qualifier" title="Top eight qualifier">🏓</span>}
+                  </TableCell>
                   <TableCell className="text-center">{row.played}</TableCell><TableCell className="text-center">{row.won}</TableCell><TableCell className="text-center">{row.lost}</TableCell><TableCell className="text-center">{row.gameDifference > 0 ? "+" : ""}{row.gameDifference}</TableCell>
                 </TableRow>
               ))}

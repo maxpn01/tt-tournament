@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Cloud, CloudOff, Download, FileUp, KeyRound, Printer, Settings, Share2, Wifi, WifiOff } from "lucide-react";
+import { Cloud, CloudOff, Download, FileUp, KeyRound, Settings, Share2, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import { ConflictDialog, PublishDialog, SeedDialog, SettingsDialog, ShareDialog,
 import { RoundRobinView } from "@/components/tournament/round-robin-view";
 import { ScoreDialog } from "@/components/tournament/score-dialog";
 import { SetupView } from "@/components/tournament/setup-view";
+import { TableTennisLogo } from "@/components/table-tennis-logo";
+import { TournamentFormatInfo } from "@/components/tournament/tournament-format-info";
 import type { CloudMode, CloudSnapshot } from "@/lib/cloud-types";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import type { Match, TournamentState } from "@/lib/tournament-schema";
@@ -301,9 +303,11 @@ export function TournamentApp({
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-[1500px] px-4 py-5 sm:px-6 lg:px-8">
-      <header className="mb-5 flex flex-wrap items-start justify-between gap-4" data-print-hide>
+      <header className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b-2 border-primary/80 pb-4">
         <div className="flex min-w-0 items-center gap-3">
-          <Link href="/" className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary font-black text-primary-foreground shadow-lg shadow-primary/10">TT</Link>
+          <Link href="/" aria-label="Table Tennis Tournament home" className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-navy p-1.5 shadow-sm ring-2 ring-primary/20">
+            <TableTennisLogo className="size-full" />
+          </Link>
           <div className="min-w-0"><h1 className="truncate text-xl font-bold tracking-tight">{state.name}</h1><p className="text-xs font-bold uppercase tracking-[.1em] text-muted-foreground">Round robin · Top 8 playoffs</p></div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -311,7 +315,6 @@ export function TournamentApp({
           {cloud && !canEdit && <Button size="sm" variant="secondary" onClick={() => setUnlockOpen(true)}><KeyRound /> Organizer</Button>}
           {cloud && <Button size="sm" variant="secondary" onClick={() => setShareOpen(true)}><Share2 /> Share</Button>}
           {!cloud && <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}><Cloud /> Share live</Button>}
-          <Button size="icon-sm" variant="ghost" title="Print" onClick={() => window.print()}><Printer /></Button>
           <Button size="icon-sm" variant="ghost" title="Export JSON backup" onClick={() => downloadJson(`${slugify(state.name) || "tournament"}-backup.json`, state)}><Download /></Button>
           {canEdit && <Button size="icon-sm" variant="ghost" title="Import JSON backup" onClick={() => importRef.current?.click()}><FileUp /></Button>}
           {canEdit && <Button size="icon-sm" variant="ghost" title="Settings" onClick={() => setSettingsOpen(true)}><Settings /></Button>}
@@ -322,14 +325,16 @@ export function TournamentApp({
         <SummaryCard label="Players" value={String(state.players.length)} sub="Top 8 advance" />
         <SummaryCard label="Current stage" value={PHASE_LABELS[state.phase]} sub={state.phase === "round-robin" ? `Round ${currentRoundNumber(state)} of ${state.rounds.length}` : champion ? `${playerName(champion)} wins` : "Knockout stage"} />
         <SummaryCard label="Round robin" value={`${stats?.rrDone} / ${stats?.rrTotal}`} sub="Best of 3" />
-        <Card className="p-4 print-shadow-none"><p className="text-[10px] font-black uppercase tracking-[.13em] text-muted-foreground">Overall progress</p><p className="mt-1 text-2xl font-black tracking-tight">{stats?.progress}%</p><Progress className="mt-2" value={stats?.progress} /></Card>
+        <Card className="p-4"><p className="text-[10px] font-black uppercase tracking-[.13em] text-muted-foreground">Overall progress</p><p className="mt-1 text-2xl font-black tracking-tight">{stats?.progress}%</p><Progress className="mt-2" value={stats?.progress} /></Card>
       </section>
 
       <Tabs value={view} onValueChange={(value) => setView(value as typeof view)}>
-        <TabsList className="w-full" data-print-hide><TabsTrigger className="flex-1" value="round-robin">Round robin</TabsTrigger><TabsTrigger className="flex-1" value="playoffs">Playoff bracket</TabsTrigger></TabsList>
+        <TabsList className="w-full"><TabsTrigger className="flex-1" value="round-robin">Round robin</TabsTrigger><TabsTrigger className="flex-1" value="playoffs">Playoff bracket</TabsTrigger></TabsList>
         <TabsContent value="round-robin"><RoundRobinView state={state} selectedRound={selectedRound} onSelectRound={setSelectedRound} onScore={(match, bestOf) => setScoreTarget({ match, bestOf })} onCreatePlayoffs={createBracket} onViewPlayoffs={() => setView("playoffs")} canEdit={canEdit} /></TabsContent>
         <TabsContent value="playoffs"><BracketView state={state} canEdit={canEdit} onScore={(match, bestOf) => setScoreTarget({ match, bestOf })} onEditSeeds={() => setSeedOpen(true)} onCreatePlayoffs={createBracket} /></TabsContent>
       </Tabs>
+
+      <TournamentFormatInfo collapsible />
 
       <input ref={importRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importFile(file); }} />
       <ScoreDialog match={scoreTarget?.match ?? null} bestOf={scoreTarget?.bestOf ?? 3} playerName={playerName} open={Boolean(scoreTarget)} onOpenChange={(open) => { if (!open) setScoreTarget(null); }} onSave={saveScore} />
@@ -347,5 +352,5 @@ export function TournamentApp({
 }
 
 function SummaryCard({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return <Card className="min-w-0 p-4 print-shadow-none"><p className="text-[10px] font-black uppercase tracking-[.13em] text-muted-foreground">{label}</p><p className="mt-1 truncate text-xl font-black tracking-tight sm:text-2xl">{value}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p></Card>;
+  return <Card className="min-w-0 p-4"><p className="text-[10px] font-black uppercase tracking-[.13em] text-muted-foreground">{label}</p><p className="mt-1 truncate text-xl font-black tracking-tight sm:text-2xl">{value}</p><p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p></Card>;
 }

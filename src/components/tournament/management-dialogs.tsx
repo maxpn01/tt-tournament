@@ -25,7 +25,7 @@ function SeedDialogForm({ state, onApply, onOpenChange }: { state: TournamentSta
   const name = (id: string) => state.players.find((player) => player.id === id)?.name ?? "Unknown";
   return (
       <DialogContent>
-        <DialogHeader><DialogTitle>Playoff seeding</DialogTitle><DialogDescription>Set seeds 1–8. Applying a new order clears all playoff results.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Playoff order</DialogTitle><DialogDescription>Seeds are ranking positions 1–8. Reorder the qualifiers here; applying a new order clears all playoff results.</DialogDescription></DialogHeader>
         <div className="grid gap-2">
           {seeds.map((id, index) => <div key={id} className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border bg-background/50 p-2"><span className="text-center font-black text-primary">{index + 1}</span><span className="truncate text-sm font-semibold">{name(id)}</span><span className="flex gap-1"><Button size="icon-sm" variant="secondary" disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp /></Button><Button size="icon-sm" variant="secondary" disabled={index === seeds.length - 1} onClick={() => move(index, 1)}><ArrowDown /></Button></span></div>)}
         </div>

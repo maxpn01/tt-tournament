@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Cloud, Trophy } from "lucide-react";
+import { ArrowRight, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TableTennisLogo } from "@/components/table-tennis-logo";
 import { Textarea } from "@/components/ui/textarea";
+import { TournamentFormatInfo } from "@/components/tournament/tournament-format-info";
 
 const DEFAULT_PLAYERS = Array.from({ length: 17 }, (_, index) => `Player ${index + 1}`).join("\n");
 
@@ -26,12 +28,16 @@ export function SetupView({
   const valid = players.length >= 8 && players.length <= 64 && unique && name.trim().length > 0;
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-6rem)] w-full max-w-6xl place-items-center px-4 py-10 sm:px-6">
+    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-10 sm:px-6">
+      <div className="grid gap-6">
       <Card className="w-full overflow-hidden">
         <CardContent className="grid p-0 lg:grid-cols-[.8fr_1.2fr]">
-          <div className="relative overflow-hidden border-b border-border bg-primary p-8 text-primary-foreground lg:border-b-0 lg:border-r sm:p-10">
+          <div className="relative overflow-hidden border-b border-border bg-brand-navy p-8 text-white lg:border-b-0 lg:border-r sm:p-10">
             <div className="absolute -bottom-24 -right-20 size-72 rounded-full border-[45px] border-primary-foreground/8" />
-            <Trophy className="size-9" />
+            <div className="flex items-center gap-3">
+              <TableTennisLogo className="size-11 shrink-0" />
+              <span className="text-sm font-bold tracking-tight">Table Tennis Tournament</span>
+            </div>
             <p className="mt-10 text-xs font-black uppercase tracking-[.2em] opacity-70">Tournament control</p>
             <h1 className="mt-3 max-w-md text-4xl font-black leading-[.95] tracking-[-.045em] sm:text-6xl">
               Run the whole event from one screen.
@@ -74,6 +80,8 @@ export function SetupView({
           </div>
         </CardContent>
       </Card>
+      <TournamentFormatInfo />
+      </div>
     </main>
   );
 }

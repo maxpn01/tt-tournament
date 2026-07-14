@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  addPlayer,
+  allRoundRobinMatches,
   calculateStandings,
   createPlayoffs,
   createRoundRobin,
   createTournament,
+  isMatchComplete,
   matchWinner,
   setResult,
   validScoreOptions,
@@ -94,6 +97,50 @@ describe("tournament progression", () => {
       rows.findIndex((row) => row.id === b.id),
     );
     expect(matchWinner(direct)).toBeNull();
+  });
+
+  it("adds a player mid round-robin, keeping results and a valid schedule", () => {
+    let state = createTournament(
+      "Test",
+      Array.from({ length: 17 }, (_, index) => `Player ${index + 1}`),
+    );
+    // Enter two results between original players.
+    const first = allRoundRobinMatches(state)[0];
+    const second = allRoundRobinMatches(state)[1];
+    state = setResult(state, first.id, 2, 1);
+    state = setResult(state, second.id, 0, 2);
+    const savedWinnerFirst = matchWinner(allRoundRobinMatches(state).find((m) => m.id === first.id));
+    const savedWinnerSecond = matchWinner(allRoundRobinMatches(state).find((m) => m.id === second.id));
+
+    const next = addPlayer(state, "Player 18");
+
+    expect(next.players).toHaveLength(18);
+    // Full round robin among 18 = 153 matches, all pairings unique.
+    const matches = allRoundRobinMatches(next);
+    expect(matches).toHaveLength(153);
+    expect(new Set(matches.map((m) => [m.p1, m.p2].sort().join("/"))).size).toBe(153);
+    // The schema accepts the regenerated state.
+    expect(parseTournament(next).success).toBe(true);
+
+    // The new player faces all 17 originals exactly once, none played yet.
+    const added = next.players[17];
+    const addedMatches = matches.filter((m) => m.p1 === added.id || m.p2 === added.id);
+    expect(addedMatches).toHaveLength(17);
+    expect(addedMatches.every((m) => !isMatchComplete(m))).toBe(true);
+
+    // Exactly the two prior results survive, with the same winners.
+    expect(matches.filter(isMatchComplete)).toHaveLength(2);
+    const findWinner = (a: string, b: string) =>
+      matchWinner(matches.find((m) => [m.p1, m.p2].sort().join(":") === [a, b].sort().join(":")));
+    expect(findWinner(first.p1!, first.p2!)).toBe(savedWinnerFirst);
+    expect(findWinner(second.p1!, second.p2!)).toBe(savedWinnerSecond);
+  });
+
+  it("refuses to add a player once the bracket exists", () => {
+    const state = createTournament("Test", Array.from({ length: 8 }, (_, index) => `Player ${index + 1}`));
+    state.playoffs = createPlayoffs(state.players.map((player) => player.id));
+    state.phase = "quarterfinals";
+    expect(() => addPlayer(state, "Player 9")).toThrow();
   });
 
   it("rejects malformed imported scores", () => {

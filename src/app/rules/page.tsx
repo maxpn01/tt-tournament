@@ -37,12 +37,20 @@ function Seed({ n }: { n: number }) {
   );
 }
 
-export default function RulesPage() {
+export default async function RulesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const { from } = await searchParams;
+  // Only accept a same-origin absolute path (e.g. "/t/spring-open"); never an
+  // external URL or protocol-relative "//host". Fall back to the home page.
+  const backHref = from && /^\/(?!\/)/.test(from) ? from : "/";
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
       <div className="flex items-center justify-between gap-4">
         <Link
-          href="/"
+          href={backHref}
           className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-4" /> Back to tournament

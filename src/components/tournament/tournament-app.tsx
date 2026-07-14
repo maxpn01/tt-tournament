@@ -22,7 +22,7 @@ import { recallEditKey, rememberEditKey } from "@/lib/keychain";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import type { Match, TournamentState } from "@/lib/tournament-schema";
 import { parseTournament } from "@/lib/tournament-schema";
-import { allRoundRobinMatches, calculateStandings, createPlayoffs, createTournament, currentRoundNumber, isMatchComplete, matchWinner, PHASE_LABELS, playoffMatches, replaceSeeds, setResult, updatePhase } from "@/lib/tournament";
+import { addPlayer, allRoundRobinMatches, calculateStandings, createPlayoffs, createTournament, currentRoundNumber, isMatchComplete, matchWinner, PHASE_LABELS, playoffMatches, replaceSeeds, setResult, updatePhase } from "@/lib/tournament";
 import { downloadJson, slugify } from "@/lib/utils";
 
 const LOCAL_KEY = "tt-tournament-control-v1";
@@ -316,7 +316,7 @@ export function TournamentApp({
           {cloud && !canEdit && <Button size="sm" variant="secondary" onClick={() => setUnlockOpen(true)}><KeyRound /> Organizer</Button>}
           {cloud && <Button size="sm" variant="secondary" onClick={() => setShareOpen(true)}><Share2 /> Share</Button>}
           {!cloud && canEdit && <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}><Cloud /> Share live</Button>}
-          <Link href="/rules" className={buttonVariants({ variant: "ghost", size: "icon-sm" })} title="Tournament format & rules" aria-label="Tournament format and rules"><Info /></Link>
+          <Link href={cloud ? `/rules?from=${encodeURIComponent(`/t/${cloud.slug}`)}` : "/rules"} className={buttonVariants({ variant: "ghost", size: "icon-sm" })} title="Tournament format & rules" aria-label="Tournament format and rules"><Info /></Link>
           {canEdit && <Button size="icon-sm" variant="ghost" title="Export JSON backup" onClick={() => downloadJson(`${slugify(state.name) || "tournament"}-backup.json`, state)}><Download /></Button>}
           {canEdit && <Button size="icon-sm" variant="ghost" title="Import JSON backup" onClick={() => importRef.current?.click()}><FileUp /></Button>}
           {canEdit && <Button size="icon-sm" variant="ghost" title="Settings" onClick={() => setSettingsOpen(true)}><Settings /></Button>}
@@ -339,7 +339,7 @@ export function TournamentApp({
       <input ref={importRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importFile(file); }} />
       <ScoreDialog match={scoreTarget?.match ?? null} bestOf={scoreTarget?.bestOf ?? 3} playerName={playerName} open={Boolean(scoreTarget)} onOpenChange={(open) => { if (!open) setScoreTarget(null); }} onSave={saveScore} />
       <SeedDialog open={seedOpen} onOpenChange={setSeedOpen} state={state} onApply={(seeds) => { commit(replaceSeeds(state, seeds)); toast.success("Playoff seeds updated"); }} />
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} state={state} onSave={(name, names) => { const next = structuredClone(state); next.name = name; next.players = next.players.map((player, index) => ({ ...player, name: names[index] })); commit(next); toast.success("Tournament details updated"); }} onNewLocal={!cloud ? () => { setSettingsOpen(false); setResetConfirm(true); } : undefined} currentSlug={cloud?.slug} onDeleteCurrent={cloud ? () => { localStorage.removeItem(localKey); sessionStorage.removeItem(`tt-edit-key:${cloud.slug}`); setSettingsOpen(false); router.push("/"); } : undefined} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} state={state} onSave={(name, names) => { const next = structuredClone(state); next.name = name; next.players = next.players.map((player, index) => ({ ...player, name: names[index] })); commit(next); toast.success("Tournament details updated"); }} onNewLocal={!cloud ? () => { setSettingsOpen(false); setResetConfirm(true); } : undefined} currentSlug={cloud?.slug} onDeleteCurrent={cloud ? () => { localStorage.removeItem(localKey); sessionStorage.removeItem(`tt-edit-key:${cloud.slug}`); setSettingsOpen(false); router.push("/"); } : undefined} onAddPlayer={state.phase === "round-robin" && !state.playoffs ? (playerName) => { try { commit(addPlayer(state, playerName)); toast.success(`${playerName} added to the round robin`); } catch (error) { toast.error(error instanceof Error ? error.message : "Could not add the player"); } } : undefined} />
       {!cloud && <PublishDialog open={publishOpen} onOpenChange={setPublishOpen} state={state} onPublished={(slug) => router.push(`/t/${slug}`)} />}
       {cloud && <UnlockDialog open={unlockOpen} onOpenChange={setUnlockOpen} slug={cloud.slug} onUnlocked={verifyEditKey} />}
       {cloud && <ShareDialog open={shareOpen} onOpenChange={setShareOpen} slug={cloud.slug} />}

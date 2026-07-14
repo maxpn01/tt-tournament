@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, CloudUpload, Copy, ExternalLink, KeyRound, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, CloudUpload, Copy, ExternalLink, KeyRound, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,21 +36,36 @@ function SeedDialogForm({ state, onApply, onOpenChange }: { state: TournamentSta
   );
 }
 
-export function SettingsDialog({ open, onOpenChange, state, onSave, onNewLocal, currentSlug, onDeleteCurrent }: { open: boolean; onOpenChange: (value: boolean) => void; state: TournamentState; onSave: (name: string, names: string[]) => void; onNewLocal?: () => void; currentSlug?: string; onDeleteCurrent?: () => void }) {
-  return <Dialog open={open} onOpenChange={onOpenChange}>{open && <SettingsDialogForm key={`${state.id}:${state.name}:${state.players.map((player) => player.name).join(":")}`} state={state} onSave={onSave} onNewLocal={onNewLocal} onOpenChange={onOpenChange} currentSlug={currentSlug} onDeleteCurrent={onDeleteCurrent} />}</Dialog>;
+export function SettingsDialog({ open, onOpenChange, state, onSave, onNewLocal, currentSlug, onDeleteCurrent, onAddPlayer }: { open: boolean; onOpenChange: (value: boolean) => void; state: TournamentState; onSave: (name: string, names: string[]) => void; onNewLocal?: () => void; currentSlug?: string; onDeleteCurrent?: () => void; onAddPlayer?: (name: string) => void }) {
+  return <Dialog open={open} onOpenChange={onOpenChange}>{open && <SettingsDialogForm key={`${state.id}:${state.name}:${state.players.map((player) => player.name).join(":")}`} state={state} onSave={onSave} onNewLocal={onNewLocal} onOpenChange={onOpenChange} currentSlug={currentSlug} onDeleteCurrent={onDeleteCurrent} onAddPlayer={onAddPlayer} />}</Dialog>;
 }
 
-function SettingsDialogForm({ state, onSave, onNewLocal, onOpenChange, currentSlug, onDeleteCurrent }: { state: TournamentState; onSave: (name: string, names: string[]) => void; onNewLocal?: () => void; onOpenChange: (value: boolean) => void; currentSlug?: string; onDeleteCurrent?: () => void }) {
+function SettingsDialogForm({ state, onSave, onNewLocal, onOpenChange, currentSlug, onDeleteCurrent, onAddPlayer }: { state: TournamentState; onSave: (name: string, names: string[]) => void; onNewLocal?: () => void; onOpenChange: (value: boolean) => void; currentSlug?: string; onDeleteCurrent?: () => void; onAddPlayer?: (name: string) => void }) {
   const [name, setName] = useState(state.name);
   const [players, setPlayers] = useState(state.players.map((player) => player.name).join("\n"));
+  const [newPlayer, setNewPlayer] = useState("");
   const names = players.split("\n").map((value) => value.trim()).filter(Boolean);
   const unique = new Set(names.map((value) => value.toLocaleLowerCase())).size === names.length;
   const valid = name.trim() && names.length === state.players.length && unique;
+  const newPlayerTrimmed = newPlayer.trim();
+  const canAddNew = Boolean(onAddPlayer) && state.players.length < 64;
+  const newPlayerValid = newPlayerTrimmed.length > 0 && !state.players.some((player) => player.name.toLocaleLowerCase() === newPlayerTrimmed.toLocaleLowerCase());
+  const addNewPlayer = () => { if (canAddNew && newPlayerValid) { onAddPlayer!(newPlayerTrimmed); setNewPlayer(""); } };
   return (
       <DialogContent>
         <DialogHeader><DialogTitle>Tournament settings</DialogTitle><DialogDescription>Correct names without changing player identities or existing results.</DialogDescription></DialogHeader>
         <label className="grid gap-2 text-sm font-semibold">Tournament name<Input value={name} maxLength={120} onChange={(event) => setName(event.target.value)} /></label>
-        <label className="grid gap-2 text-sm font-semibold">Player names<Textarea className="min-h-60 font-mono" value={players} onChange={(event) => setPlayers(event.target.value)} /><span className="text-xs font-normal text-muted-foreground">Keep exactly {state.players.length} unique names. Adding/removing players requires a new tournament.</span></label>
+        <label className="grid gap-2 text-sm font-semibold">Player names<Textarea className="min-h-60 font-mono" value={players} onChange={(event) => setPlayers(event.target.value)} /><span className="text-xs font-normal text-muted-foreground">Rename players here — identities and results are preserved. Removing a player still requires a new tournament.</span></label>
+        {canAddNew && (
+          <div className="grid gap-2 border-t pt-4">
+            <span className="text-sm font-semibold">Add a player</span>
+            <div className="flex gap-2">
+              <Input value={newPlayer} maxLength={80} placeholder="New player name" onChange={(event) => setNewPlayer(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addNewPlayer(); } }} />
+              <Button type="button" variant="secondary" disabled={!newPlayerValid} onClick={addNewPlayer}><UserPlus /> Add</Button>
+            </div>
+            <span className="text-xs font-normal text-muted-foreground">Schedules their round-robin matches against everyone. Existing results are kept. Only possible before the bracket is created.</span>
+          </div>
+        )}
         <ManagePublishedTournaments currentSlug={currentSlug} onDeleteCurrent={onDeleteCurrent} />
         <DialogFooter className="sm:justify-between">{onNewLocal ? <Button variant="destructive" onClick={onNewLocal}>New tournament</Button> : <span />}<span className="flex gap-2"><Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={!valid} onClick={() => { onSave(name.trim(), names); onOpenChange(false); }}>Save changes</Button></span></DialogFooter>
       </DialogContent>

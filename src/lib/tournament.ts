@@ -91,6 +91,49 @@ export function allRoundRobinMatches(state: TournamentState) {
   return state.rounds.flatMap((round) => round.matches);
 }
 
+const pairKey = (a: string, b: string) => [a, b].sort().join(":");
+
+/**
+ * Add a player during the round-robin phase, preserving every result already
+ * entered. The schedule is regenerated for the larger field (so the new player
+ * is paired against everyone), then completed scores are copied back by matchup
+ * — orientation-safe, since a regenerated match may list the pair in either
+ * order. Only valid before a playoff bracket exists.
+ */
+export function addPlayer(state: TournamentState, name: string): TournamentState {
+  if (state.phase !== "round-robin" || state.playoffs) {
+    throw new Error("Players can only be added during the round robin");
+  }
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("A player name is required");
+  if (state.players.length >= 64) throw new Error("A tournament can have at most 64 players");
+  if (state.players.some((player) => player.name.toLocaleLowerCase() === trimmed.toLocaleLowerCase())) {
+    throw new Error("That player name is already taken");
+  }
+
+  const results = new Map<string, { s1: number; s2: number; p1: string }>();
+  for (const match of allRoundRobinMatches(state)) {
+    if (!isMatchComplete(match) || !match.p1 || !match.p2) continue;
+    results.set(pairKey(match.p1, match.p2), { s1: match.s1, s2: match.s2, p1: match.p1 });
+  }
+
+  const players = [...state.players, { id: makeId("player"), name: trimmed }];
+  const rounds = createRoundRobin(players);
+
+  for (const round of rounds) {
+    for (const match of round.matches) {
+      if (!match.p1 || !match.p2) continue;
+      const saved = results.get(pairKey(match.p1, match.p2));
+      if (!saved) continue;
+      const sameOrientation = saved.p1 === match.p1;
+      match.s1 = sameOrientation ? saved.s1 : saved.s2;
+      match.s2 = sameOrientation ? saved.s2 : saved.s1;
+    }
+  }
+
+  return { ...state, players, rounds, phase: "round-robin", playoffs: null };
+}
+
 export function playoffMatches(playoffs: Playoffs | null) {
   return playoffs ? [...playoffs.qf, ...playoffs.sf, playoffs.final] : [];
 }

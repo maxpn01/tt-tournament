@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TableTennisLogo } from "@/components/table-tennis-logo";
 import { Textarea } from "@/components/ui/textarea";
-import { TournamentFormatInfo } from "@/components/tournament/tournament-format-info";
+import { RulesLink } from "@/components/tournament/tournament-format-info";
 
 const DEFAULT_PLAYERS = Array.from({ length: 17 }, (_, index) => `Player ${index + 1}`).join("\n");
 
@@ -80,7 +80,7 @@ export function SetupView({
           </div>
         </CardContent>
       </Card>
-      <TournamentFormatInfo />
+      <RulesLink />
       </div>
     </main>
   );

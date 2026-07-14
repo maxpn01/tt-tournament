@@ -24,9 +24,7 @@ export type Standing = {
   gamesWon: number;
   gamesLost: number;
   gameDifference: number;
-  gameRatio: number;
   headToHeadWins: number;
-  headToHeadRatio: number;
 };
 
 export function makeId(prefix: string) {
@@ -111,11 +109,6 @@ export function matchWinner(match: Match | null | undefined) {
   return match.s1 > match.s2 ? match.p1 : match.p2;
 }
 
-function ratio(won: number, lost: number) {
-  if (lost === 0) return won === 0 ? 0 : Number.POSITIVE_INFINITY;
-  return won / lost;
-}
-
 export function calculateStandings(state: TournamentState): Standing[] {
   const completed = allRoundRobinMatches(state).filter(isMatchComplete);
   const base = new Map<string, Standing>(
@@ -130,9 +123,7 @@ export function calculateStandings(state: TournamentState): Standing[] {
         gamesWon: 0,
         gamesLost: 0,
         gameDifference: 0,
-        gameRatio: 0,
         headToHeadWins: 0,
-        headToHeadRatio: 0,
       },
     ]),
   );
@@ -159,9 +150,10 @@ export function calculateStandings(state: TournamentState): Standing[] {
   const rows = [...base.values()];
   for (const row of rows) {
     row.gameDifference = row.gamesWon - row.gamesLost;
-    row.gameRatio = ratio(row.gamesWon, row.gamesLost);
   }
 
+  // Head-to-head: among players level on match wins, count wins in the matches
+  // played only between those tied players.
   const winGroups = new Map<number, Standing[]>();
   for (const row of rows) {
     const group = winGroups.get(row.won) ?? [];
@@ -171,34 +163,25 @@ export function calculateStandings(state: TournamentState): Standing[] {
   for (const tiedRows of winGroups.values()) {
     if (tiedRows.length < 2) continue;
     const tiedIds = new Set(tiedRows.map((row) => row.id));
-    const miniGames = new Map(tiedRows.map((row) => [row.id, { won: 0, lost: 0, matches: 0 }]));
+    const headToHead = new Map(tiedRows.map((row) => [row.id, 0]));
 
     for (const match of completed) {
       if (!tiedIds.has(match.p1!) || !tiedIds.has(match.p2!)) continue;
-      const a = miniGames.get(match.p1!)!;
-      const b = miniGames.get(match.p2!)!;
-      a.won += match.s1;
-      a.lost += match.s2;
-      b.won += match.s2;
-      b.lost += match.s1;
-      if (match.s1 > match.s2) a.matches += 1;
-      else b.matches += 1;
+      const winner = match.s1 > match.s2 ? match.p1! : match.p2!;
+      headToHead.set(winner, headToHead.get(winner)! + 1);
     }
 
     for (const row of tiedRows) {
-      const mini = miniGames.get(row.id)!;
-      row.headToHeadWins = mini.matches;
-      row.headToHeadRatio = ratio(mini.won, mini.lost);
+      row.headToHeadWins = headToHead.get(row.id)!;
     }
   }
 
+  // Ranking ladder: match wins → head-to-head wins → overall game
+  // difference → alphabetical (a stable, repeatable final tiebreak).
   return rows.sort((a, b) => {
     if (b.won !== a.won) return b.won - a.won;
     if (b.headToHeadWins !== a.headToHeadWins) return b.headToHeadWins - a.headToHeadWins;
-    if (b.headToHeadRatio !== a.headToHeadRatio) return b.headToHeadRatio - a.headToHeadRatio;
-    if (b.gameRatio !== a.gameRatio) return b.gameRatio - a.gameRatio;
     if (b.gameDifference !== a.gameDifference) return b.gameDifference - a.gameDifference;
-    if (b.gamesWon !== a.gamesWon) return b.gamesWon - a.gamesWon;
     return a.name.localeCompare(b.name);
   });
 }

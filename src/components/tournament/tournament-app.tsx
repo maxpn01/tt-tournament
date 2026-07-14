@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Cloud, CloudOff, Download, FileUp, KeyRound, Settings, Share2, Wifi, WifiOff } from "lucide-react";
+import { Cloud, CloudOff, Download, FileUp, Info, KeyRound, Settings, Share2, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +17,6 @@ import { RoundRobinView } from "@/components/tournament/round-robin-view";
 import { ScoreDialog } from "@/components/tournament/score-dialog";
 import { SetupView } from "@/components/tournament/setup-view";
 import { TableTennisLogo } from "@/components/table-tennis-logo";
-import { TournamentFormatInfo } from "@/components/tournament/tournament-format-info";
 import type { CloudMode, CloudSnapshot } from "@/lib/cloud-types";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import type { Match, TournamentState } from "@/lib/tournament-schema";
@@ -314,8 +313,9 @@ export function TournamentApp({
           <Badge variant={saveStatus === "offline" || saveStatus === "conflict" ? "destructive" : cloud ? "default" : "outline"}>{saveStatus === "offline" ? <WifiOff /> : cloud ? <Wifi /> : <CloudOff />}{cloudLabel}</Badge>
           {cloud && !canEdit && <Button size="sm" variant="secondary" onClick={() => setUnlockOpen(true)}><KeyRound /> Organizer</Button>}
           {cloud && <Button size="sm" variant="secondary" onClick={() => setShareOpen(true)}><Share2 /> Share</Button>}
-          {!cloud && <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}><Cloud /> Share live</Button>}
-          <Button size="icon-sm" variant="ghost" title="Export JSON backup" onClick={() => downloadJson(`${slugify(state.name) || "tournament"}-backup.json`, state)}><Download /></Button>
+          {!cloud && canEdit && <Button size="sm" variant="secondary" onClick={() => setPublishOpen(true)}><Cloud /> Share live</Button>}
+          <Link href="/rules" className={buttonVariants({ variant: "ghost", size: "icon-sm" })} title="Tournament format & rules" aria-label="Tournament format and rules"><Info /></Link>
+          {canEdit && <Button size="icon-sm" variant="ghost" title="Export JSON backup" onClick={() => downloadJson(`${slugify(state.name) || "tournament"}-backup.json`, state)}><Download /></Button>}
           {canEdit && <Button size="icon-sm" variant="ghost" title="Import JSON backup" onClick={() => importRef.current?.click()}><FileUp /></Button>}
           {canEdit && <Button size="icon-sm" variant="ghost" title="Settings" onClick={() => setSettingsOpen(true)}><Settings /></Button>}
         </div>
@@ -333,8 +333,6 @@ export function TournamentApp({
         <TabsContent value="round-robin"><RoundRobinView state={state} selectedRound={selectedRound} onSelectRound={setSelectedRound} onScore={(match, bestOf) => setScoreTarget({ match, bestOf })} onCreatePlayoffs={createBracket} onViewPlayoffs={() => setView("playoffs")} canEdit={canEdit} /></TabsContent>
         <TabsContent value="playoffs"><BracketView state={state} canEdit={canEdit} onScore={(match, bestOf) => setScoreTarget({ match, bestOf })} onEditSeeds={() => setSeedOpen(true)} onCreatePlayoffs={createBracket} /></TabsContent>
       </Tabs>
-
-      <TournamentFormatInfo collapsible />
 
       <input ref={importRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importFile(file); }} />
       <ScoreDialog match={scoreTarget?.match ?? null} bestOf={scoreTarget?.bestOf ?? 3} playerName={playerName} open={Boolean(scoreTarget)} onOpenChange={(open) => { if (!open) setScoreTarget(null); }} onSave={saveScore} />

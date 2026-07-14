@@ -109,7 +109,7 @@ export function RoundRobinView({
               ))}
             </TableBody>
           </Table>
-          <p className="border-t border-border p-4 text-[11px] leading-5 text-muted-foreground">Tiebreak: match wins → mini-league wins → mini-league game ratio → overall game ratio → game difference. Seeds can be adjusted before playoffs.</p>
+          <p className="border-t border-border p-4 text-[11px] leading-5 text-muted-foreground">Tiebreak: match wins → head-to-head → game difference → name. Seeds can be adjusted before playoffs.</p>
         </CardContent>
       </Card>
     </div>

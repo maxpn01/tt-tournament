@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowDown, ArrowUp, CloudUpload, Copy, KeyRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowDown, ArrowUp, CloudUpload, Copy, ExternalLink, KeyRound, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { CloudSnapshot } from "@/lib/cloud-types";
+import { forgetEditKey, organizedSlugs, recallEditKey, rememberEditKey } from "@/lib/keychain";
 import type { TournamentState } from "@/lib/tournament-schema";
-import { slugify } from "@/lib/utils";
+import { formatRelativeTime, slugify } from "@/lib/utils";
 
 export function SeedDialog({ open, onOpenChange, state, onApply }: { open: boolean; onOpenChange: (value: boolean) => void; state: TournamentState; onApply: (seeds: string[]) => void }) {
   return <Dialog open={open} onOpenChange={onOpenChange}>{open && <SeedDialogForm key={state.playoffs?.seeds.join(":")} state={state} onApply={onApply} onOpenChange={onOpenChange} />}</Dialog>;
@@ -34,11 +36,11 @@ function SeedDialogForm({ state, onApply, onOpenChange }: { state: TournamentSta
   );
 }
 
-export function SettingsDialog({ open, onOpenChange, state, onSave, onNewLocal }: { open: boolean; onOpenChange: (value: boolean) => void; state: TournamentState; onSave: (name: string, names: string[]) => void; onNewLocal?: () => void }) {
-  return <Dialog open={open} onOpenChange={onOpenChange}>{open && <SettingsDialogForm key={`${state.id}:${state.name}:${state.players.map((player) => player.name).join(":")}`} state={state} onSave={onSave} onNewLocal={onNewLocal} onOpenChange={onOpenChange} />}</Dialog>;
+export function SettingsDialog({ open, onOpenChange, state, onSave, onNewLocal, currentSlug, onDeleteCurrent }: { open: boolean; onOpenChange: (value: boolean) => void; state: TournamentState; onSave: (name: string, names: string[]) => void; onNewLocal?: () => void; currentSlug?: string; onDeleteCurrent?: () => void }) {
+  return <Dialog open={open} onOpenChange={onOpenChange}>{open && <SettingsDialogForm key={`${state.id}:${state.name}:${state.players.map((player) => player.name).join(":")}`} state={state} onSave={onSave} onNewLocal={onNewLocal} onOpenChange={onOpenChange} currentSlug={currentSlug} onDeleteCurrent={onDeleteCurrent} />}</Dialog>;
 }
 
-function SettingsDialogForm({ state, onSave, onNewLocal, onOpenChange }: { state: TournamentState; onSave: (name: string, names: string[]) => void; onNewLocal?: () => void; onOpenChange: (value: boolean) => void }) {
+function SettingsDialogForm({ state, onSave, onNewLocal, onOpenChange, currentSlug, onDeleteCurrent }: { state: TournamentState; onSave: (name: string, names: string[]) => void; onNewLocal?: () => void; onOpenChange: (value: boolean) => void; currentSlug?: string; onDeleteCurrent?: () => void }) {
   const [name, setName] = useState(state.name);
   const [players, setPlayers] = useState(state.players.map((player) => player.name).join("\n"));
   const names = players.split("\n").map((value) => value.trim()).filter(Boolean);
@@ -49,8 +51,123 @@ function SettingsDialogForm({ state, onSave, onNewLocal, onOpenChange }: { state
         <DialogHeader><DialogTitle>Tournament settings</DialogTitle><DialogDescription>Correct names without changing player identities or existing results.</DialogDescription></DialogHeader>
         <label className="grid gap-2 text-sm font-semibold">Tournament name<Input value={name} maxLength={120} onChange={(event) => setName(event.target.value)} /></label>
         <label className="grid gap-2 text-sm font-semibold">Player names<Textarea className="min-h-60 font-mono" value={players} onChange={(event) => setPlayers(event.target.value)} /><span className="text-xs font-normal text-muted-foreground">Keep exactly {state.players.length} unique names. Adding/removing players requires a new tournament.</span></label>
+        <ManagePublishedTournaments currentSlug={currentSlug} onDeleteCurrent={onDeleteCurrent} />
         <DialogFooter className="sm:justify-between">{onNewLocal ? <Button variant="destructive" onClick={onNewLocal}>New tournament</Button> : <span />}<span className="flex gap-2"><Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button><Button disabled={!valid} onClick={() => { onSave(name.trim(), names); onOpenChange(false); }}>Save changes</Button></span></DialogFooter>
       </DialogContent>
+  );
+}
+
+type ListedTournament = { slug: string; name: string; revision: number; createdAt: string; updatedAt: string };
+
+function ManagePublishedTournaments({ currentSlug, onDeleteCurrent }: { currentSlug?: string; onDeleteCurrent?: () => void }) {
+  const [items, setItems] = useState<ListedTournament[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [mine, setMine] = useState<Set<string>>(new Set());
+  const [onlyMine, setOnlyMine] = useState(true);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [keyInput, setKeyInput] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMine(new Set(organizedSlugs()));
+    let active = true;
+    fetch("/api/tournaments", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error())))
+      .then((body) => { if (active) setItems(Array.isArray(body.tournaments) ? body.tournaments : []); })
+      .catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, []);
+
+  async function remove(slug: string) {
+    const key = recallEditKey(slug) ?? keyInput.trim();
+    if (!key) { toast.error("Enter this tournament's edit key to delete it"); return; }
+    setBusy(slug);
+    try {
+      const response = await fetch(`/api/tournaments/${slug}`, {
+        method: "DELETE",
+        headers: { "x-tournament-edit-key": key },
+      });
+      if (response.status === 403 || response.status === 401) { toast.error("That edit key is incorrect"); return; }
+      if (!response.ok) throw new Error();
+      forgetEditKey(slug);
+      setConfirming(null);
+      setKeyInput("");
+      toast.success("Tournament deleted");
+      if (slug === currentSlug) {
+        // Deleting the tournament that's open: let the app clear its local
+        // copy and return to the create screen instead of showing a stale view.
+        onDeleteCurrent?.();
+        return;
+      }
+      setItems((current) => current?.filter((item) => item.slug !== slug) ?? null);
+      setMine((current) => { const next = new Set(current); next.delete(slug); return next; });
+    } catch {
+      toast.error("Could not delete the tournament");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const organizedCount = items?.filter((item) => mine.has(item.slug)).length ?? 0;
+  const visible = items?.filter((item) => !onlyMine || mine.has(item.slug)) ?? [];
+
+  return (
+    <section className="grid gap-2 border-t pt-4">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold">Published tournaments</h3>
+          <p className="text-xs text-muted-foreground">Delete stale live tournaments you organize.</p>
+        </div>
+        {(organizedCount > 0 || !onlyMine) && items && items.length > 0 && (
+          <Button size="sm" variant="ghost" onClick={() => setOnlyMine((value) => !value)}>
+            {onlyMine ? "Show all" : "Show mine"}
+          </Button>
+        )}
+      </div>
+
+      {failed && <p className="rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive">Cloud storage is unavailable, so tournaments can’t be listed right now.</p>}
+      {!failed && items === null && <p className="text-xs text-muted-foreground">Loading…</p>}
+      {!failed && items?.length === 0 && <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">No tournaments have been published yet.</p>}
+      {!failed && items && items.length > 0 && onlyMine && organizedCount === 0 && (
+        <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+          You haven’t organized any tournaments on this device.{" "}
+          <button type="button" className="font-medium text-primary underline underline-offset-2" onClick={() => setOnlyMine(false)}>Show all published</button>
+        </p>
+      )}
+
+      {visible.length > 0 && (
+        <ul className="grid max-h-56 gap-1.5 overflow-y-auto pr-0.5">
+          {visible.map((item) => {
+            const owned = mine.has(item.slug);
+            const isCurrent = item.slug === currentSlug;
+            return (
+              <li key={item.slug} className="flex items-center gap-2 rounded-lg border bg-background/50 p-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <a href={`/t/${item.slug}`} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1 truncate text-sm font-semibold hover:text-primary">
+                      <span className="truncate">{item.name}</span>
+                      <ExternalLink className="size-3 shrink-0 opacity-60" />
+                    </a>
+                    {isCurrent && <Badge variant="secondary">Open now</Badge>}
+                    {owned && <Badge variant="outline">You organize</Badge>}
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">/t/{item.slug} · updated {formatRelativeTime(item.updatedAt)}</p>
+                </div>
+                {confirming === item.slug ? (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {!owned && <Input autoFocus type="password" className="h-8 w-28" placeholder="Edit key" value={keyInput} onChange={(event) => setKeyInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void remove(item.slug); }} />}
+                    <Button size="sm" variant="destructive" disabled={busy === item.slug} onClick={() => void remove(item.slug)}>{busy === item.slug ? "Deleting…" : "Confirm"}</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setConfirming(null); setKeyInput(""); }}>Cancel</Button>
+                  </div>
+                ) : (
+                  <Button size="icon-sm" variant="ghost" title="Delete tournament" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => { setConfirming(item.slug); setKeyInput(""); }}><Trash2 /></Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -66,6 +183,7 @@ export function PublishDialog({ open, onOpenChange, state, onPublished }: { open
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Could not publish tournament");
       sessionStorage.setItem(`tt-edit-key:${slug}`, key);
+      rememberEditKey(slug, key);
       onPublished(slug, key);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not publish tournament");

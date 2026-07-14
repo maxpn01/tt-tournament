@@ -3,6 +3,35 @@ import { apiError, stateIsReasonableSize } from "@/lib/api";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { createCloudTournamentSchema } from "@/lib/tournament-schema";
 
+export async function GET() {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return apiError("Cloud storage is not configured", 503);
+
+  const { data, error } = await supabase
+    .from("tournaments")
+    .select("slug, name, revision, created_at, updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error("Tournament list failed", error);
+    return apiError("Could not list tournaments", 500);
+  }
+
+  return Response.json(
+    {
+      tournaments: data.map((row) => ({
+        slug: row.slug,
+        name: row.name,
+        revision: row.revision,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })),
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
 export async function POST(request: Request) {
   const supabase = getSupabaseAdmin();
   if (!supabase) return apiError("Cloud storage is not configured", 503);
